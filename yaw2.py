@@ -11,11 +11,11 @@ import pyrealsense2 as rs
 TARGET_CLASS_ID = 0          # 0 = person, change as needed
 THRESHOLD_PX    = 25.0      
 YAW_GAIN        = 0.1       
-PITCH_PGAIN     = 0.18
-PITCH_IGAIN     = 0.0022
-PITCH_DGAIN     = 0.0038
-SERVO_RANGE_DEG = 90
-SERVO_NEUTRAL   = 45
+PITCH_PGAIN     = 0.1
+PITCH_IGAIN     = 0.1
+PITCH_DGAIN     = 0.1
+SERVO_RANGE_DEG = 180
+SERVO_NEUTRAL   = 90
 model = YOLO("yolo11n.pt")
 #cap   = cv2.VideoCapture(1)  
 master = mavutil.mavlink_connection('/dev/ttyACM0', baud=115200)
@@ -83,19 +83,19 @@ def set_servo_pwm(channel: int, pwm_us: int):
     )
     print(f"  → Channel {channel} set to {pwm_us} us")
 integral = 0.0
-prev_error_y = 0.0
-pitch_angle = 45.0
-INTEGRAL_CLAMP = 50.0   # anti-windup
+prev_y = 90.0
+pitch_angle = 90.0
+INTEGRAL_CLAMP = 1000.0   # anti-windup
 '''if not cap.isOpened():
     print("Error: Could not open the external camera.")
     exit()'''
-def pid(error_y, dt):
-    global integral, prev_error_y
+def pid(error_y, pitch_angle, dt):
+    global integral, prev_y
     p = error_y
-    d = (error_y - prev_error_y) / dt
+    d = (pitch_angle - prev_y) / dt
     integral += error_y * dt
     integral = max(-INTEGRAL_CLAMP, min(INTEGRAL_CLAMP, integral))  
-    prev_error_y = error_y
+    prev_y = pitch_angle
     print("integral term: ", PITCH_IGAIN * integral, "derivative term: ", PITCH_DGAIN * d, "proportional term: ", PITCH_PGAIN * p)
     return PITCH_PGAIN * p - PITCH_DGAIN * d + PITCH_IGAIN * integral
 
@@ -114,13 +114,13 @@ i=0
 start_time = time.time()
 p_dt = time.time()
 time.sleep(2)
-pitch_angle = 45.0
+pitch_angle = 90.0
 fps = 0
 while True:
     bestframe = None
     list1=[]
     list2=[]
-    for i in range(5):
+    for i in range(2):
         try:
             frames = pipeline.wait_for_frames(timeout_ms=10000) 
         except RuntimeError as e:
@@ -168,14 +168,14 @@ while True:
         if abs(error_x) > THRESHOLD_PX:
             yaw_change = abs(error_x) * YAW_GAIN
             #set_yaw(yaw_change)         
-        MAX_ANGLE_CHANGE = 1.5  
+        MAX_ANGLE_CHANGE = 1.5 
         if abs(error_y) > THRESHOLD_PX:
             dt   = time.time() - p_dt
             p_dt = time.time()
-            pidc = pid(error_y, dt)
+            pidc = pid(error_y,pitch_angle, dt)
             
             target_pitch = SERVO_NEUTRAL + pidc
-            target_pitch = max(0, min(90, target_pitch))
+            target_pitch = max(0, min(180, target_pitch))
 
             delta = target_pitch - pitch_angle
             delta = max(-MAX_ANGLE_CHANGE, min(MAX_ANGLE_CHANGE, delta))
@@ -203,7 +203,6 @@ while True:
                     cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     else:
         integral     = 0.0
-        prev_error_y = 0.0
         #pitch_angle  = float(SERVO_NEUTRAL)
         #set_servo_pwm(9, 1500)
     
