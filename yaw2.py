@@ -115,6 +115,7 @@ start_time = time.time()
 p_dt = time.time()
 time.sleep(2)
 pitch_angle = 45.0
+fps = 0
 while True:
     bestframe = None
     list1=[]
@@ -130,7 +131,7 @@ while True:
             continue
         
         frame = np.asanyarray(color_frame.get_data())
-
+        fps = fps+1
         h, w, _ = frame.shape
         frame_cx = w // 2
         frame_cy = h // 2
@@ -186,6 +187,8 @@ while True:
             elapsed = time.time() - start_time
             if elapsed >= 1.0:
                 print("number of command sent per sec", i)
+                print("fps:", fps)
+                fps = 0
                 i=0
                 start_time = time.time()
 
