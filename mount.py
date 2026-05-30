@@ -15,7 +15,7 @@ PITCH_DGAIN     = 0.1
 SERVO_RANGE_DEG = 180
 SERVO_NEUTRAL   = 90
 
-model = YOLO("yolo11n.pt")  
+model = YOLO("/home/aakriti/Downloads/best.pt")  #for hand detection
 master = mavutil.mavlink_connection('/dev/ttyUSB0', baud=57600)
 master.wait_heartbeat()
 print("Connected")
